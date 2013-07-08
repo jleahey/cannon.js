@@ -16,12 +16,53 @@
     <script>
 
         /**
-         * Demonstrates how to use the HingeConstraint.
+         * Demonstrates how to use the HingeConstraint to make a simple dynamic car.
          * A hinge constraint makes sure that two bodies can rotate around a common axis. For example, think of a door hinge.
          */
 
         var demo = new CANNON.Demo();
         var mass = 1;
+
+        var addWheels = function(car, axelPosPosition, wheelSize, wheelMaterial){
+            var wheelShape =  new CANNON.Cylinder(wheelSize, wheelSize, 1, 10);
+            //tranform cylinder to be on different axis
+            var quat = new CANNON.Quaternion();
+            quat.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
+            var translation = new CANNON.Vec3(0,0,0);
+            wheelShape.transformAllPoints(translation,quat);
+
+            var chassis = car.bodies[0];
+            var zero = new CANNON.Vec3();
+
+            var leftAxis = new CANNON.Vec3(0,1,0);
+            var rightAxis = new CANNON.Vec3(0,-1,0);
+            var leftWheel = new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
+            var rightWheel = new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
+            //move wheels to where they will be held
+            leftWheel  .position.set(axelPosPosition.x, axelPosPosition.y, axelPosPosition.z);
+            rightWheel .position.set(axelPosPosition.x, -axelPosPosition.y, axelPosPosition.z);
+            //constain wheels
+            car.constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, axelPosPosition.y, axelPosPosition.z), leftAxis,  leftWheel,   zero, leftAxis));
+            car.constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, -axelPosPosition.y, axelPosPosition.z), rightAxis, rightWheel,  zero, rightAxis));
+            //add wheels to car object
+            car.bodies.push(leftWheel);
+            car.bodies.push(rightWheel);
+        };
+
+        var getCar = function(wheelMaterial, shape, wheelSize){
+            var chassisShape = new CANNON.Box(shape);
+            var chassis = new CANNON.RigidBody(mass,chassisShape);
+            var wheelDistance = shape.y+3;
+
+            // Constrain wheels
+            this.constraints = [];
+            this.bodies = [chassis];
+
+            addWheels(this, new CANNON.Vec3(shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
+            addWheels(this, new CANNON.Vec3(-shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
+
+            return this;
+        };
 
         demo.addScene("car",function(){
             var world = demo.getWorld();
@@ -32,50 +73,14 @@
             var wheelGroundContactMaterial = new CANNON.ContactMaterial(groundMaterial,wheelMaterial, 0.5, 0.3);
             world.addContactMaterial(wheelGroundContactMaterial);
 
-            var wheelShape =      new CANNON.Sphere(1.2);
-            var leftFrontWheel =  new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
-            var rightFrontWheel = new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
-            var leftRearWheel =   new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
-            var rightRearWheel =  new CANNON.RigidBody(mass,wheelShape,wheelMaterial);
-
-            var chassisShape = new CANNON.Box(new CANNON.Vec3(5,2,0.5));
-            var chassis = new CANNON.RigidBody(mass,chassisShape);
-
-            // Position constrain wheels
-            var zero = new CANNON.Vec3();
-            leftFrontWheel .position.set(  5,  5, 0); 
-            rightFrontWheel.position.set(  5, -5, 0);
-            leftRearWheel  .position.set( -5,  5, 0);
-            rightRearWheel .position.set( -5, -5, 0);
-
-            // Constrain wheels
-            var constraints = [];
-            
-            // Hinge the wheels
-            var leftAxis =       new CANNON.Vec3(0,1,0);
-            var rightAxis =      new CANNON.Vec3(0,-1,0);
-            var leftFrontAxis =  new CANNON.Vec3(0,1,0);
-            var rightFrontAxis = new CANNON.Vec3(0,-1,0);
-            if(true){
-                leftFrontAxis =  new CANNON.Vec3(0.3,0.7,0);
-                rightFrontAxis = new CANNON.Vec3(-0.3,-0.7,0);
-                leftFrontAxis.normalize();
-                rightFrontAxis.normalize();
+            var shape = new CANNON.Vec3(5,2,0.5);
+            var car = getCar(wheelMaterial, shape, 1.2);
+            for(var i=0; i<car.bodies.length; i++){
+                world.add(car.bodies[i]);
+                demo.addVisual(car.bodies[i]);
             }
-
-            constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3( 5, 5, 0), leftFrontAxis,  leftFrontWheel,  zero, leftAxis));
-            constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3( 5,-5, 0), rightFrontAxis, rightFrontWheel, zero, rightAxis));
-            constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(-5, 5, 0), leftAxis,  leftRearWheel,   zero, leftAxis));
-            constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(-5,-5, 0), rightAxis, rightRearWheel,  zero, rightAxis));
-
-            for(var i=0; i<constraints.length; i++)
-                world.addConstraint(constraints[i]);
-
-            var bodies = [chassis,leftFrontWheel,rightFrontWheel,leftRearWheel,rightRearWheel];
-            for(var i=0; i<bodies.length; i++){
-                world.add(bodies[i]);
-                demo.addVisual(bodies[i]);
-            }
+            for(var i=0; i<car.constraints.length; i++)
+                world.addConstraint(car.constraints[i]);
 
             // Ground 
             var groundShape = new CANNON.Plane();
