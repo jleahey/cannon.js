@@ -59,6 +59,7 @@
             this.bodies = [chassis];
 
             addWheels(this, new CANNON.Vec3(shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
+            addWheels(this, new CANNON.Vec3(0, wheelDistance, 0), wheelSize, wheelMaterial);
             addWheels(this, new CANNON.Vec3(-shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
 
             return this;
