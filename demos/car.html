@@ -33,7 +33,7 @@
             this.bodies = [chassis];
 
             this.addWheels(new CANNON.Vec3(shape.x, wheelDistance, 0), wheelSize, wheelMaterial, 14);
-            this.addWheels(new CANNON.Vec3(0, wheelDistance, 0), wheelSize, wheelMaterial, 0);
+            this.addWheels(new CANNON.Vec3(0, wheelDistance, 1), wheelSize, wheelMaterial, 0);
             this.addWheels(new CANNON.Vec3(-shape.x, wheelDistance, 0), wheelSize, wheelMaterial, 0);
         };
 
@@ -70,7 +70,15 @@
                 leftHinge.motorTargetVelocity = motorVelocity;
                 rightHinge.motorTargetVelocity = -motorVelocity;
             }
+        };
 
+        Car.prototype.setPosition = function(x, y, z) {
+            var oldChassisPosition = this.bodies[0].position.copy();
+            for(var i=0; i<this.bodies.length; i++){
+                this.bodies[i].position.x += x - oldChassisPosition.x;
+                this.bodies[i].position.y += y - oldChassisPosition.y;
+                this.bodies[i].position.z += z - oldChassisPosition.z;
+            }
         };
 
         demo.addScene("car",function(){
@@ -82,14 +90,18 @@
             var wheelGroundContactMaterial = new CANNON.ContactMaterial(groundMaterial,wheelMaterial, 0.5, 0.3);
             world.addContactMaterial(wheelGroundContactMaterial);
 
-            var shape = new CANNON.Vec3(5,2,0.5);
-            var car = new Car(wheelMaterial, shape, 1.2);
-            for(var i=0; i<car.bodies.length; i++){
-                world.add(car.bodies[i]);
-                demo.addVisual(car.bodies[i]);
+
+            for(var carCount = 0; carCount < 5; carCount++) {
+                var shape = new CANNON.Vec3(5,2,0.5);
+                var car = new Car(wheelMaterial, shape, 1.2);
+                car.setPosition(0, 0, carCount*5);
+                for(var i=0; i<car.bodies.length; i++){
+                    world.add(car.bodies[i]);
+                    demo.addVisual(car.bodies[i]);
+                }
+                for(var i=0; i<car.constraints.length; i++)
+                    world.addConstraint(car.constraints[i]);
             }
-            for(var i=0; i<car.constraints.length; i++)
-                world.addConstraint(car.constraints[i]);
 
             // Ground 
             var groundShape = new CANNON.Plane();
