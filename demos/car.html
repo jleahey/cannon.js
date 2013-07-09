@@ -90,14 +90,14 @@
             world.add(ground);
             demo.addVisual(ground);
 
-            // Enable motors and set their velocities
-            var frontLeftHinge = constraints[2];
-            var frontRightHinge = constraints[3];
-            frontLeftHinge.enableMotor();
-            frontRightHinge.enableMotor();
+            // Enable motors on back wheels
+            var lastLeftHinge = constraints[constraints.length-2];
+            var lastRightHinge = constraints[constraints.length-1];
+            lastLeftHinge.enableMotor();
+            lastRightHinge.enableMotor();
             var v = -14;
-            frontLeftHinge.motorTargetVelocity = v;
-            frontRightHinge.motorTargetVelocity = -v;
+            lastLeftHinge.motorTargetVelocity = v;
+            lastRightHinge.motorTargetVelocity = -v;
 
         });
 
