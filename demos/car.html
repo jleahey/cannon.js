@@ -23,7 +23,21 @@
         var demo = new CANNON.Demo();
         var mass = 1;
 
-        var addWheels = function(car, axelPosPosition, wheelSize, wheelMaterial){
+        var Car = function(wheelMaterial, shape, wheelSize){
+            var chassisShape = new CANNON.Box(shape);
+            var chassis = new CANNON.RigidBody(mass,chassisShape);
+            var wheelDistance = shape.y+3;
+
+            // Constrain wheels
+            this.constraints = [];
+            this.bodies = [chassis];
+
+            this.addWheels(new CANNON.Vec3(shape.x, wheelDistance, 0), wheelSize, wheelMaterial, 14);
+            this.addWheels(new CANNON.Vec3(0, wheelDistance, 0), wheelSize, wheelMaterial, 0);
+            this.addWheels(new CANNON.Vec3(-shape.x, wheelDistance, 0), wheelSize, wheelMaterial, 0);
+        };
+
+        Car.prototype.addWheels = function(axelPosPosition, wheelSize, wheelMaterial, motorVelocity){
             var wheelShape =  new CANNON.Cylinder(wheelSize, wheelSize, 1, 10);
             //tranform cylinder to be on different axis
             var quat = new CANNON.Quaternion();
@@ -31,7 +45,7 @@
             var translation = new CANNON.Vec3(0,0,0);
             wheelShape.transformAllPoints(translation,quat);
 
-            var chassis = car.bodies[0];
+            var chassis = this.bodies[0];
             var zero = new CANNON.Vec3();
 
             var leftAxis = new CANNON.Vec3(0,1,0);
@@ -42,27 +56,21 @@
             leftWheel  .position.set(axelPosPosition.x, axelPosPosition.y, axelPosPosition.z);
             rightWheel .position.set(axelPosPosition.x, -axelPosPosition.y, axelPosPosition.z);
             //constain wheels
-            car.constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, axelPosPosition.y, axelPosPosition.z), leftAxis,  leftWheel,   zero, leftAxis));
-            car.constraints.push(new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, -axelPosPosition.y, axelPosPosition.z), rightAxis, rightWheel,  zero, rightAxis));
-            //add wheels to car object
-            car.bodies.push(leftWheel);
-            car.bodies.push(rightWheel);
-        };
+            var leftHinge = new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, axelPosPosition.y, axelPosPosition.z), leftAxis,  leftWheel,   zero, leftAxis);
+            var rightHinge = new CANNON.HingeConstraint(chassis, new CANNON.Vec3(axelPosPosition.x, -axelPosPosition.y, axelPosPosition.z), rightAxis, rightWheel,  zero, rightAxis);
+            this.constraints.push(leftHinge);
+            this.constraints.push(rightHinge);
+            //add wheels
+            this.bodies.push(leftWheel);
+            this.bodies.push(rightWheel);
+            // Enable motors on back wheels
+            if(motorVelocity != 0) {
+                leftHinge.enableMotor();
+                rightHinge.enableMotor();
+                leftHinge.motorTargetVelocity = motorVelocity;
+                rightHinge.motorTargetVelocity = -motorVelocity;
+            }
 
-        var getCar = function(wheelMaterial, shape, wheelSize){
-            var chassisShape = new CANNON.Box(shape);
-            var chassis = new CANNON.RigidBody(mass,chassisShape);
-            var wheelDistance = shape.y+3;
-
-            // Constrain wheels
-            this.constraints = [];
-            this.bodies = [chassis];
-
-            addWheels(this, new CANNON.Vec3(shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
-            addWheels(this, new CANNON.Vec3(0, wheelDistance, 0), wheelSize, wheelMaterial);
-            addWheels(this, new CANNON.Vec3(-shape.x, wheelDistance, 0), wheelSize, wheelMaterial);
-
-            return this;
         };
 
         demo.addScene("car",function(){
@@ -75,7 +83,7 @@
             world.addContactMaterial(wheelGroundContactMaterial);
 
             var shape = new CANNON.Vec3(5,2,0.5);
-            var car = getCar(wheelMaterial, shape, 1.2);
+            var car = new Car(wheelMaterial, shape, 1.2);
             for(var i=0; i<car.bodies.length; i++){
                 world.add(car.bodies[i]);
                 demo.addVisual(car.bodies[i]);
@@ -89,16 +97,6 @@
             ground.position.z = -3;
             world.add(ground);
             demo.addVisual(ground);
-
-            // Enable motors on back wheels
-            var lastLeftHinge = constraints[constraints.length-2];
-            var lastRightHinge = constraints[constraints.length-1];
-            lastLeftHinge.enableMotor();
-            lastRightHinge.enableMotor();
-            var v = -14;
-            lastLeftHinge.motorTargetVelocity = v;
-            lastRightHinge.motorTargetVelocity = -v;
-
         });
 
 
